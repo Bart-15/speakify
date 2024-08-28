@@ -1,0 +1,8 @@
+Type: AWS::S3::Bucket
+Properties:
+  BucketName: ${self:custom.SpeakifyBucket.name}
+  PublicAccessBlockConfiguration:
+    BlockPublicAcls: true
+    BlockPublicPolicy: true
+    IgnorePublicAcls: true
+    RestrictPublicBuckets: true
