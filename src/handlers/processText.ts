@@ -1,23 +1,32 @@
-import { Polly, S3 } from 'aws-sdk';
-import { ProxyHandler } from 'src/types/handler.types';
+import Polly from 'aws-sdk/clients/polly';
+import S3 from 'aws-sdk/clients/s3';
+
 import { v4 as uuidv4 } from 'uuid';
+import { handleError } from '../middleware/errorHandler';
+import validateResource from '../middleware/validateResource';
+import { ProxyHandler } from '../types/handler.types';
+import {
+  processTextPayload,
+  processTextValidationSchema,
+} from '../validations/processText.validation';
 
 export const s3 = new S3({
   apiVersion: '2006-03-01',
   signatureVersion: 'v4',
 });
 
-const polly = new Polly();
+const pollyCLient = new Polly();
 
-const processText: ProxyHandler = async event => {
+//Handler
+const processText: ProxyHandler = async (event, context) => {
+  console.log(context);
+  const reqBody = JSON.parse(event.body as string) as processTextPayload;
+
+  const { text, voiceId } = reqBody;
+
   try {
-    const parsedBody = JSON.parse(event.body as string);
+    validateResource(processTextValidationSchema, reqBody); //Validation starts here
 
-    if (!parsedBody.text) {
-      return { statusCode: 400, body: JSON.stringify({ message: 'Text is required' }) };
-    }
-
-    const { text } = parsedBody;
     const textFileName = `text/${uuidv4()}.txt`;
 
     //Uplaod text file to s3
@@ -34,11 +43,11 @@ const processText: ProxyHandler = async event => {
     const speechParams: Polly.SynthesizeSpeechInput = {
       Text: text,
       OutputFormat: 'mp3',
-      VoiceId: 'Joanna',
+      VoiceId: voiceId,
       Engine: 'neural',
     };
 
-    const pollyResponse = await polly.synthesizeSpeech(speechParams).promise();
+    const pollyResponse = await pollyCLient.synthesizeSpeech(speechParams).promise();
 
     const audioFileName = `audio/${textFileName.replace('.txt', '.mp3')}`;
 
@@ -64,13 +73,8 @@ const processText: ProxyHandler = async event => {
       body: JSON.stringify({ message: 'Text to speech conversion completed', audioUrl }),
     };
   } catch (err) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({
-        message: 'Ooops, something went wrong. Please try again later',
-        error: err,
-      }),
-    };
+    console.log(err);
+    return handleError(err);
   }
 };
 

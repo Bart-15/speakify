@@ -1,6 +1,10 @@
 Type: AWS::S3::Bucket
 Properties:
   BucketName: ${self:custom.SpeakifyBucket.name}
+  LifecycleConfiguration:
+    Rules:
+      - Status: Enabled
+        ExpirationInDays: 1
   PublicAccessBlockConfiguration:
     BlockPublicAcls: true
     BlockPublicPolicy: true

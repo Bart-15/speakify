@@ -1,0 +1,37 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: speakify-service
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: dev
+  region: ap-southeast-1
+  memorySize: 500
+  timeout: 15
+  environment:
+    SPEAKIFY_BUCKET_NAME: ${self:custom.SpeakifyBucket.name}
+  iam:
+    role:
+      statements: ${file(src/config/iam/IamRoleStatements.yml)}
+
+plugins:
+  # - serverless-webpack # serverless webpack plugin
+  # - serverless-plugin-typescript
+  - serverless-offline
+
+resources:
+  Resources:
+    SpeakifyBucket: ${file(src/config/s3/SpeakifyBucket.yml)}
+
+functions:
+  processText:
+    handler: src/handlers/processText.handler
+    events:
+      - http:
+          path: /process
+          method: POST
+
+custom:
+  SpeakifyBucket:
+    name: speakify-bucket-${self:provider.stage}
